@@ -12,31 +12,50 @@ db = SQLAlchemy(model_class=Base)
 # Models
 
 
-class Node(db.Model):
-    __tablename__ = 'nodes'
+class Folder(db.Model):
+    __tablename__ = 'folders'
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
-    node_type = Column(Enum("file", "folder"))
-    parent_node = Column(Integer, ForeignKey(column='nodes.id'))
-    client = Column(Integer)
-    children = relationship("Node", back_populates="parent", remote_side=[id])
-    meta_data = Column(Integer, ForeignKey(column='meta_data.id'))
+    parent_folder = Column(Integer, ForeignKey(column='folders.id'))
+    # client = Column(Integer)
+    children = relationship(
+        "File", back_populates="parent"
+        # , remote_side=[id]
+    )
+    parent = relationship('Folder', remote_side=[id])
 
     __table_args__ = (
-        UniqueConstraint('parent_node', 'name', name='uq_parent_name'),
+        UniqueConstraint('parent_folder', 'name', name='uq_parent_name'),
     )
 
-    def __init__(self, name, node_type, parent_node, client):
+    def __init__(self, name, parent_folder, client):
         self.name = name
-        self.node_type = node_type
-        self.parent_node = parent_node
+        self.parent_folder = parent_folder
         self.client = client
 
     def __repr__(self):
-        return f'type-{self.node_type} | name-{self.name}'
+        return f'folder | name-{self.name}'
+
+
+class File(db.Model):
+    __tablename__ = 'files'
+    id = Column(Integer, primary_key=True)
+    meta_data = Column(Integer, ForeignKey(column='meta_data.id'))
+    parent_folder = Column(Integer, ForeignKey(column='folders.id'))
+    parent = relationship("Folder", back_populates="children")
 
 
 class Metadata(db.Model):
     __tablename__ = 'meta_data'
     id = Column(Integer, primary_key=True)
-    name = Column(String(50))
+    # datanodes = relationship("Block", back_populates="metadata")
+
+
+class Datanode(db.Model):
+    __tablename__ = 'datanodes'
+    id = Column(Integer, primary_key=True)
+
+
+class Block(db.Model):
+    __tablename__ = 'blocks'
+    id = Column(Integer, primary_key=True)

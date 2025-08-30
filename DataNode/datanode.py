@@ -7,7 +7,8 @@ app = Flask(__name__)
 def write():
     if request.method == "POST":
         dic: dict = request.get_json()
-        print(f"escribiendo {dic.get("file")}")
+        with open(f'{dic.get('name')}.dat', mode="a") as file:
+            file.write(dic.get('data'))
     return Response(status=200)
 
 
