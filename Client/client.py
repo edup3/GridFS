@@ -19,9 +19,9 @@ class Client(cmd.Cmd):
     def menu(self):
         pass
 
-    def request_nodes(self, name: str, file_path: str, action: str, folder_name):
+    def request_nodes(self, name: str, file_path: str, action: str, path: str):
         namendode_response = requests.get(f'{self.namenode_url}/request_nodes',
-                                          params={'name': name, 'size': os.path.getsize(file_path), 'action': action, 'folder_name': folder_name})
+                                          params={'name': name, 'size': os.path.getsize(file_path), 'action': action, 'path': path})
         return namendode_response.json()
 
     def write(self, metadata: dict, file_str: str):
@@ -52,7 +52,6 @@ class Client(cmd.Cmd):
                 ip = block_metadata['ip']
                 block_content = self.read_block(
                     ip, path, file_name, block_metadata['part'])
-                print(block_content)
                 f.write(block_content)
 
 
@@ -60,6 +59,6 @@ if __name__ == '__main__':
     namenode_url = os.environ.get('NAMENODE_URL')
     client = Client(1, '2', namenode_url,)
     metadata: dict = client.request_nodes(
-        'egxampli.txt', 'cosa.txt', 'read', 'documents')
+        'egxampli.txt', 'cosa.txt', 'read', 'root/documents')
     # client.write(metadata, "cosa.txt")
     client.read_file(metadata)

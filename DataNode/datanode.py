@@ -2,15 +2,16 @@ import requests
 from flask import Flask, request, Response
 import os
 app = Flask(__name__)
-DATANODE_URL = 'http://127.0.0.1:12345'
+DATANODE_URL = 'http://127.0.0.1'
 NAMENODE_URL = 'http://127.0.0.1:5000'
+PORT = 12345
 STORAGE_DIR = os.path.join(os.getcwd(), "storage")
 
 
 def register_to_cluster():
     try:
         resp = requests.post(f"{NAMENODE_URL}/register_datanode", json={
-            "ip": DATANODE_URL,
+            "ip": DATANODE_URL, 'port': PORT
         })
         print("Registro con NameNode:", resp.json())
     except Exception as e:
