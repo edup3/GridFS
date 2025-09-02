@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, UniqueConstraint, BigInteger, DateTime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, relationship, backref
+from datetime import datetime
 
 
 class Base(DeclarativeBase):
@@ -18,44 +19,96 @@ class Folder(db.Model):
     name = Column(String(50))
     parent_folder = Column(Integer, ForeignKey(column='folders.id'))
     # client = Column(Integer)
+
+    parent = relationship(
+        "Folder",
+        remote_side=[id],
+        back_populates="children")
     children = relationship(
-        "File", back_populates="parent"
-        # , remote_side=[id]
-    )
-    parent = relationship('Folder', remote_side=[id])
+        "Folder", back_populates="parent")
+    files = relationship('File', back_populates='parent')
 
     __table_args__ = (
         UniqueConstraint('parent_folder', 'name', name='uq_parent_name'),
     )
 
-    def __init__(self, name, parent_folder, client):
+    def __init__(self, name, parent_folder):
         self.name = name
         self.parent_folder = parent_folder
-        self.client = client
+
+    def get_path(self):
+        parts = [self.name]
+        folder: Folder = self.parent
+        while folder:
+            parts.append(folder.name)
+            folder = folder.parent
+        return "/".join(reversed(parts))
 
     def __repr__(self):
-        return f'folder | name-{self.name}'
+        return f'Folder: {self.name}'
 
 
 class File(db.Model):
     __tablename__ = 'files'
     id = Column(Integer, primary_key=True)
-    meta_data = Column(Integer, ForeignKey(column='meta_data.id'))
+    name = Column(String(50))
+    size = Column(Integer)  # bytes
+    created_at = Column(DateTime, default=datetime.now())
     parent_folder = Column(Integer, ForeignKey(column='folders.id'))
-    parent = relationship("Folder", back_populates="children")
 
+    parent = relationship("Folder", back_populates="files")
+    blocks = relationship('Block', back_populates='file')
 
-class Metadata(db.Model):
-    __tablename__ = 'meta_data'
-    id = Column(Integer, primary_key=True)
-    # datanodes = relationship("Block", back_populates="metadata")
+    def __init__(self, name, size, parent_folder):
+        self.name = name
+        self.size = size
+        self.parent_folder = parent_folder
+
+    def get_path(self):
+        parts = [self.name]
+        folder: Folder = self.parent
+        while folder:
+            parts.append(folder.name)
+            folder = folder.parent
+        return "/".join(reversed(parts))
+
+    def __repr__(self):
+        return f'File: {self.name}'
 
 
 class Datanode(db.Model):
     __tablename__ = 'datanodes'
     id = Column(Integer, primary_key=True)
+    ip = Column(String(50), nullable=False)
+    port = Column(Integer, nullable=False)
+    capacity = Column(BigInteger, default=0)  # capacidad total
+    used = Column(BigInteger, default=0)  # espacio usado
+    last_heartbeat = Column(DateTime, default=datetime.now())
+
+    blocks = db.relationship(
+        "Block", back_populates="datanode", cascade="all, delete-orphan")
+
+    def __init__(self, ip, port, capacity):
+        self.ip = ip
+        self.port = port
+        self.capacity = capacity
 
 
 class Block(db.Model):
     __tablename__ = 'blocks'
     id = Column(Integer, primary_key=True)
+    file_id = Column(Integer, ForeignKey(column='files.id'))
+    datanode_id = Column(Integer, ForeignKey(column='datanodes.id'))
+    part = Column(Integer)
+    # size = Column(Integer)
+
+    datanode = relationship("Datanode", back_populates='blocks')
+    file = relationship('File', back_populates='blocks')
+
+    def __init__(self, file_id, datanode_id, part):
+        self.file_id = file_id
+        self.datanode_id = datanode_id
+        self.part = part
+
+    def __repr__(self):
+        return f'{self.file.name}_part{self.part}.dat'

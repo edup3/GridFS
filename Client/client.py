@@ -14,24 +14,23 @@ class Client:
     namenode_url: str
 
     def menu(self):
-        opcion = input("comandos put,get,pwd")
-        if opcion == 1:
-            pass
+        pass
 
-    def request_nodes(self, name: str, file_path: str, action: str):
+    def request_nodes(self, name: str, file_path: str, action: str, folder_name):
         namendode_response = requests.get(f'{self.namenode_url}/request_nodes',
-                                          params={'name': name, 'size': os.path.getsize(file_path), 'action': action})
+                                          params={'name': name, 'size': os.path.getsize(file_path), 'action': action, 'folder_name': folder_name})
         return namendode_response.json()
 
     def write(self, metadata: dict, file_str: str):
-        ips = metadata.get('ips')
+        blocks = metadata.get('blocks')
         with open(file_str, mode='rb') as f:
             part = 0
-            for ip in ips:
-                subfile = f.read(metadata.get('block_size'))
-                print(subfile.decode())
+            for block in blocks:
+                print(int(block.get('block_size')))
+                subfile = f.read(block.get('block_size'))
+                print("subfile_part:", part, subfile)
                 response = requests.post(
-                    ip, json={'name': f'{metadata.get('file')}_part{part}', 'data': subfile.decode('utf-8')})
+                    f'{block.get('ip')}/write', json={'name': f'{metadata.get('name')}_part{part}', 'data': subfile.decode('utf-8'), 'path': metadata.get('path')})
                 part += 1
                 if subfile == None:
                     break
@@ -43,7 +42,6 @@ class Client:
 if __name__ == '__main__':
     namenode_url = os.environ.get('NAMENODE_URL')
     client = Client(1, '2', namenode_url,)
-    metadata: dict = client.request_nodes('egxampli.txt', 'cosa.txt', "write")
-    print(metadata)
+    metadata: dict = client.request_nodes(
+        'egxampli.txt', 'cosa.txt', 'write', 'documents')
     client.write(metadata, "cosa.txt")
-    pass
