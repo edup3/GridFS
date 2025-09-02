@@ -21,16 +21,27 @@ def register_to_cluster():
 def write():
     if request.method == "POST":
         data: dict = request.get_json()
-        print(data)
         path = data["path"]
         content = data["data"]
         block_path = os.path.join(STORAGE_DIR, path)
-        print(STORAGE_DIR)
-        print(block_path)
         os.makedirs(block_path, exist_ok=True)
         with open(f"{block_path}/{data.get('name')}.dat", mode="a") as file:
             file.write(data.get('data'))
     return Response(status=200)
+
+
+@app.route("/read", methods=["GET"])
+def read():
+    if request.method == "GET":
+        data: dict = request.args
+        print(data)
+        path = data["block_path"]
+        name = data["block_name"]
+        part = data["part"]
+        block_path = os.path.join(STORAGE_DIR, path)
+        with open(f"{block_path}/{name}_part{part}.dat", mode="r") as file:
+            content = file.read()
+    return {'data': content}, 200
 
 
 if __name__ == "__main__":

@@ -2,13 +2,16 @@ import requests
 from dataclasses import dataclass
 import os
 from dotenv import load_dotenv
-import argparse
+import cmd
 
 load_dotenv()
 
 
 @dataclass
-class Client:
+class Client(cmd.Cmd):
+    intro = "Bienvenido a MiniHDFS CLI. Escribe 'help' o '?' para ver comandos.\n"
+    prompt = "hdfs> "
+    current_dir = "/root"
     id: int
     wd: str
     namenode_url: str
@@ -35,13 +38,28 @@ class Client:
                 if subfile == None:
                     break
 
-    def read(self,):
-        pass
+    def read_block(self, datanode_ip, block_path, block_name, part) -> str:
+        block_content = requests.get(
+            f'{datanode_ip}/read', params={'block_path': block_path, 'block_name': block_name, 'part': part})
+        return block_content.json()['data']
+
+    def read_file(self, metadata):
+        file_name: str = metadata['name']
+        block_list: list = metadata['blocks']
+        path: str = metadata['path']
+        with open(file_name, mode='w') as f:
+            for block_metadata in block_list:
+                ip = block_metadata['ip']
+                block_content = self.read_block(
+                    ip, path, file_name, block_metadata['part'])
+                print(block_content)
+                f.write(block_content)
 
 
 if __name__ == '__main__':
     namenode_url = os.environ.get('NAMENODE_URL')
     client = Client(1, '2', namenode_url,)
     metadata: dict = client.request_nodes(
-        'egxampli.txt', 'cosa.txt', 'write', 'documents')
-    client.write(metadata, "cosa.txt")
+        'egxampli.txt', 'cosa.txt', 'read', 'documents')
+    # client.write(metadata, "cosa.txt")
+    client.read_file(metadata)

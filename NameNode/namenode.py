@@ -6,8 +6,23 @@ import random as rd
 
 
 class NameNode:
-    def read():
-        pass
+    def read(file_name: str):
+        file = db.session.execute(
+            select(File).filter_by(name=file_name)).scalar_one()
+        blocks: list[Block] = file.blocks
+        blocks_meta = []
+        for block in blocks:
+            blocks_meta.append({
+                'ip': block.datanode.ip,
+                'part': block.part,
+            })
+
+        file_meta = {
+            'name': file.name,
+            'path': file.get_path(),
+            'blocks': blocks_meta
+        }
+        return file_meta
 
     def get():
         pass
@@ -25,12 +40,12 @@ class NameNode:
         pass
 
     def write(file_name: str, file_size: int, folder_name: str):
+        # block_size ajustable
         block_size = 64
-        print(folder_name)
+        # busqueda deberia ser por path
         folder = Folder.query.filter_by(name=folder_name).first()
-        print(folder)
+        # busqueda deberia ser por path
         if File.query.filter_by(name=file_name).all():
-            print(File.query.filter_by(name=file_name).first())
             return {'message': 'file already exists'}, 500
         file = File(file_name, file_size, folder.id)
         db.session.add(file)
@@ -56,6 +71,7 @@ class NameNode:
             'path': file.get_path(),
             'blocks': blocks_meta
         }
+        print(file_meta)
         return file_meta
 
 
@@ -93,7 +109,6 @@ def home():
         metadata = NameNode.write(file_name, file_size, folder_name)
     elif action == 'read':
         metadata = NameNode.read(file_name)
-    print(metadata)
     return metadata
 
 
