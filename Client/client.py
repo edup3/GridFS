@@ -3,19 +3,17 @@ from dataclasses import dataclass
 import os
 from dotenv import load_dotenv
 import cmd
+import shlex
 
 load_dotenv()
 
 
-@dataclass
 class Client(cmd.Cmd):
     intro = "Bienvenido a MiniHDFS CLI. Escribe 'help' o '?' para ver comandos.\n"
     prompt = "hdfs> "
-    current_dir = "/root"
-    id: int
-    wd: str
-    namenode_url: str
-
+    id: int = 1
+    wd: str = "root/"
+    namenode_url: str = os.environ.get('NAMENODE_URL')
     def menu(self):
         pass
 
@@ -54,11 +52,44 @@ class Client(cmd.Cmd):
                     ip, path, file_name, block_metadata['part'])
                 f.write(block_content)
 
+    def do_put(self, arg):
+        args = shlex.split(arg)
+        if len(args) != 2:
+            print("Uso: put <archivo_local> <nombre_remoto>")
+            return
+        local_file, remote_file = args
+        metadata = self.request_nodes(remote_file,local_file,'write',self.wd)
+        self.write(metadata,local_file)
+
+    def do_get(self, arg):
+        args = shlex.split(arg)
+        if len(args) != 2:
+            print("Uso: put <archivo_local> <nombre_remoto>")
+            return
+        local_file, remote_file = args
+        metadata = self.request_nodes(remote_file,local_file,'read',self.wd)
+        self.read_file(metadata)
+
+
+
+    def do_cd(self, arg):
+        new_path = os.path.normpath(os.path.join(self.current_dir, arg))
+
+
+    def do_ls(self, arg):
+        path = arg.strip() if arg else self.wd
+        resp = requests.get(f"{self.namenode_url}/list", params={"path": path})
+        print(resp)
+
+    def do_pwd(self,arg):
+        print(self.wd)
+
 
 if __name__ == '__main__':
     namenode_url = os.environ.get('NAMENODE_URL')
-    client = Client(1, '2', namenode_url,)
-    metadata: dict = client.request_nodes(
-        'egxampli.txt', 'cosa.txt', 'read', 'root/documents')
-    # client.write(metadata, "cosa.txt")
-    client.read_file(metadata)
+    Client().cmdloop()
+    # client = Client(namenode_url,1)
+    # metadata: dict = client.request_nodes(
+    #     'egxampli.txt', 'cosa.txt', 'read', 'root/documents')
+    # # client.write(metadata, "cosa.txt")
+    # client.read_file(metadata)
