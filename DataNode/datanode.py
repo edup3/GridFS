@@ -26,8 +26,9 @@ def write():
         content = data["data"]
         block_path = os.path.join(STORAGE_DIR, path)
         os.makedirs(block_path, exist_ok=True)
-        with open(f"{block_path}/{data.get('name')}.dat", mode="a") as file:
+        with open(f"{block_path}/{data.get('name')}.dat", mode="w") as file:
             file.write(data.get('data'))
+            print('escrito en modo W')
     return Response(status=200)
 
 

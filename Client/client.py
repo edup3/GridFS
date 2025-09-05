@@ -16,9 +16,6 @@ class Client(cmd.Cmd):
     wd: str
     namenode_url: str
 
-    def menu(self):
-        pass
-
     def request_nodes(self, name: str, file_path: str, action: str, path: str):
         namendode_response = requests.get(f'{self.namenode_url}/request_nodes',
                                           params={'name': name, 'size': os.path.getsize(file_path), 'action': action, 'path': path})
@@ -59,6 +56,6 @@ if __name__ == '__main__':
     namenode_url = os.environ.get('NAMENODE_URL')
     client = Client(1, '2', namenode_url,)
     metadata: dict = client.request_nodes(
-        'egxampli.txt', 'cosa.txt', 'read', 'root/documents')
+        'egxampli2.txt', 'cosa.txt', 'read', 'root')
     # client.write(metadata, "cosa.txt")
     client.read_file(metadata)

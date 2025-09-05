@@ -19,7 +19,6 @@ class NameNode:
 
     def resolve_path(path: str, classtype: str):
         parts = [p for p in path.strip("/").split("/") if p]
-
         if not parts:
             return None
 
@@ -28,6 +27,8 @@ class NameNode:
             name=parts[0], parent_folder=None).first()
         if not current_folder:
             return None
+        elif len(parts) == 1:
+            return current_folder
 
         for part in parts[1:-1]:  # todos menos el último
             current_folder = db.session.query(Folder).filter_by(
@@ -59,8 +60,6 @@ class NameNode:
 
     def read(file_path: str):
         file: File = NameNode.resolve_path(file_path, 'File')
-        print(file_path)
-        print(file)
         blocks: list[Block] = file.blocks
         blocks_meta = []
         for block in blocks:
@@ -74,6 +73,7 @@ class NameNode:
             'path': file.get_path(),
             'blocks': blocks_meta
         }
+        print(file_meta)
         return file_meta
 
     def write(file_name: str, file_size: int, folder_path: str):
@@ -82,7 +82,7 @@ class NameNode:
         # busqueda deberia ser por path
         folder: Folder = NameNode.resolve_path(folder_path, 'Folder')
         # busqueda deberia ser por path
-        if folder.query.filter_by(name=file_name):
+        if folder.query.filter_by(name=file_name).first():
             return {'message': 'file already exists'}, 500
         file = File(file_name, file_size, folder.id)
         db.session.add(file)

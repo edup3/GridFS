@@ -25,8 +25,9 @@ class Folder(db.Model):
         remote_side=[id],
         back_populates="children")
     children = relationship(
-        "Folder", back_populates="parent")
-    files = relationship('File', back_populates='parent')
+        "Folder", back_populates="parent", cascade="all, delete-orphan")
+    files = relationship('File', back_populates='parent',
+                         cascade="all, delete-orphan")
 
     __table_args__ = (
         UniqueConstraint('parent_folder', 'name', name='uq_parent_name'),
@@ -54,10 +55,15 @@ class File(db.Model):
     name = Column(String(50))
     size = Column(Integer)  # bytes
     created_at = Column(DateTime, default=datetime.now())
-    parent_folder = Column(Integer, ForeignKey(column='folders.id'))
+    parent_folder = Column(Integer, ForeignKey(
+        column='folders.id', ondelete='CASCADE'))
 
     parent = relationship("Folder", back_populates="files")
-    blocks = relationship('Block', back_populates='file')
+    blocks = relationship('Block', back_populates='file',
+                          cascade="all, delete-orphan")
+    __table_args__ = (
+        UniqueConstraint('parent_folder', 'name', name='uq_parent_name'),
+    )
 
     def __init__(self, name, size, parent_folder):
         self.name = name
@@ -97,13 +103,15 @@ class Datanode(db.Model):
 class Block(db.Model):
     __tablename__ = 'blocks'
     id = Column(Integer, primary_key=True)
-    file_id = Column(Integer, ForeignKey(column='files.id'))
-    datanode_id = Column(Integer, ForeignKey(column='datanodes.id'))
+    file_id = Column(Integer, ForeignKey(
+        column='files.id', ondelete='CASCADE'))
+    datanode_id = Column(Integer, ForeignKey(
+        column='datanodes.id', ondelete='CASCADE'))
     part = Column(Integer)
     # size = Column(Integer)
 
     datanode = relationship("Datanode", back_populates='blocks')
-    file = relationship('File', back_populates='blocks')
+    file = relationship('File', back_populates='blocks',)
 
     def __init__(self, file_id, datanode_id, part):
         self.file_id = file_id
