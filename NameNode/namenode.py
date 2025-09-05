@@ -33,6 +33,13 @@ def home():
     return metadata
 
 
+@app.route("/list", methods=["GET"])
+def get_folder_contents():
+    path = request.args.get('path')
+    folder = NameNode.resolve_path(path, 'Folder')
+    return folder.files + folder.children
+
+
 if __name__ == "__main__":
     pass
     # app.run(debug=True)
