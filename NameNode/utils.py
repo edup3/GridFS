@@ -66,6 +66,7 @@ class NameNode:
             blocks_meta.append({
                 'ip': block.datanode.ip,
                 'part': block.part,
+                'port': block.datanode.port
             })
 
         file_meta = {
@@ -73,11 +74,11 @@ class NameNode:
             'path': file.get_path(),
             'blocks': blocks_meta
         }
-        print(file_meta)
         return file_meta
 
     def write(file_name: str, file_size: int, folder_path: str):
         # block_size ajustable
+        file_size = int(file_size)
         block_size = 64
         # busqueda deberia ser por path
         folder: Folder = NameNode.resolve_path(folder_path, 'Folder')
@@ -86,11 +87,11 @@ class NameNode:
             return {'message': 'file already exists'}, 500
         file = File(file_name, file_size, folder.id)
         db.session.add(file)
-        db.session.commit()
         blocks = math.ceil(file_size/block_size)
         datanodes = Datanode.query.all()
         if not datanodes:
             return {"error": "No hay datanodes registrados"}, 500
+        db.session.commit()
         blocks_meta = []
         for part in range(blocks):
             random_datanode = rd.choice(datanodes)
@@ -99,6 +100,7 @@ class NameNode:
             db.session.commit()
             blocks_meta.append({
                 'ip': block.datanode.ip,
+                'port': block.datanode.port,
                 'part': block.part,
                 'block_size': block_size
             })
@@ -108,4 +110,31 @@ class NameNode:
             'path': file.get_path(),
             'blocks': blocks_meta
         }
+        return file_meta
+
+    def create_folder(wd, folder_name):
+        parent_folder = NameNode.resolve_path(wd, 'Folder')
+        new_folder = Folder(folder_name, parent_folder.id)
+        db.session.add(new_folder)
+        db.session.commit()
+
+    def delete_file(file_path: str):
+        file: File = NameNode.resolve_path(file_path, 'File')
+        blocks: list[Block] = file.blocks
+        blocks_meta = []
+        for block in blocks:
+            blocks_meta.append({
+                'ip': block.datanode.ip,
+                'part': block.part,
+                'port': block.datanode.port
+            })
+
+        file_meta = {
+            'name': file.name,
+            'path': file.get_path(),
+            'blocks': blocks_meta
+        }
+        db.session.delete(file)
+        db.session.commit()
+        print(file_meta)
         return file_meta

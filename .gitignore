@@ -2,3 +2,4 @@
 *.sql
 *.env
 DataNode/storage
+Client/*.txt

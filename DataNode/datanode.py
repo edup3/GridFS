@@ -1,6 +1,7 @@
 import requests
 from flask import Flask, request, Response
 import os
+import shutil
 app = Flask(__name__)
 DATANODE_URL = 'http://127.0.0.1'
 NAMENODE_URL = 'http://127.0.0.1:5000'
@@ -44,6 +45,25 @@ def read():
         with open(f"{block_path}/{name}_part{part}.dat", mode="r") as file:
             content = file.read()
     return {'data': content}, 200
+
+
+@app.route("/delete_file", methods=["DELETE"])
+def delete_file():
+    if request.method == "DELETE":
+        data: dict = request.args
+        path = data["block_path"]
+        name = data["block_name"]
+        block_path = os.path.join(STORAGE_DIR, path)
+        file_path = os.path.join(block_path, name)
+        try:
+            os.remove(f'{file_path}.dat')
+        except Exception as e:
+            print(f"An error occurred: {e}")
+        try:
+            os.rmdir(block_path)
+        except:
+            pass
+        return {'status': 'borrado correctamente'}, 200
 
 
 if __name__ == "__main__":
