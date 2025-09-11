@@ -17,14 +17,14 @@ class NameNode:
 
         return {"status": "registered"}
 
-    def resolve_path(path: str, classtype: str):
+    def resolve_path(path: str, classtype: str, user_id: int):
         parts = [p for p in path.strip("/").split("/") if p]
         if not parts:
             return None
 
         # Buscar la raíz
         current_folder = db.session.query(Folder).filter_by(
-            name=parts[0], parent_folder=None).first()
+            name=parts[0], parent_folder=None, user_id=user_id).first()
         if not current_folder:
             return None
         elif len(parts) == 1:
@@ -33,7 +33,8 @@ class NameNode:
         for part in parts[1:-1]:  # todos menos el último
             current_folder = db.session.query(Folder).filter_by(
                 name=part,
-                parent_folder=current_folder.id
+                parent_folder=current_folder.id,
+                user_id=user_id
             ).first()
             if not current_folder:
                 return None
@@ -44,7 +45,8 @@ class NameNode:
             # Buscar folder
             folder = db.session.query(Folder).filter_by(
                 name=last,
-                parent_folder=current_folder.id
+                parent_folder=current_folder.id,
+                user_id=user_id
             ).first()
             if folder:
                 return folder
@@ -52,14 +54,15 @@ class NameNode:
             # Buscar archivo
             file = db.session.query(File).filter_by(
                 name=last,
-                parent_folder=current_folder.id
+                parent_folder=current_folder.id,
+                user_id=user_id
             ).first()
             if file:
                 return file
         return None
 
-    def read(file_path: str):
-        file: File = NameNode.resolve_path(file_path, 'File')
+    def read(file_path: str, user_id):
+        file: File = NameNode.resolve_path(file_path, 'File', user_id)
         blocks: list[Block] = file.blocks
         blocks_meta = []
         for block in blocks:
@@ -76,16 +79,16 @@ class NameNode:
         }
         return file_meta
 
-    def write(file_name: str, file_size: int, folder_path: str):
+    def write(file_name: str, file_size: int, folder_path: str, user_id: int):
         # block_size ajustable
         file_size = int(file_size)
         block_size = 64
         # busqueda deberia ser por path
-        folder: Folder = NameNode.resolve_path(folder_path, 'Folder')
+        folder: Folder = NameNode.resolve_path(folder_path, 'Folder', user_id)
         # busqueda deberia ser por path
-        if folder.query.filter_by(name=file_name).first():
+        if folder.query.filter_by(name=file_name, user_id=user_id).first():
             return {'message': 'file already exists'}, 500
-        file = File(file_name, file_size, folder.id)
+        file = File(file_name, file_size, folder.id, user_id)
         db.session.add(file)
         blocks = math.ceil(file_size/block_size)
         datanodes = Datanode.query.all()
@@ -112,14 +115,14 @@ class NameNode:
         }
         return file_meta
 
-    def create_folder(wd, folder_name):
-        parent_folder = NameNode.resolve_path(wd, 'Folder')
-        new_folder = Folder(folder_name, parent_folder.id)
+    def create_folder(wd, folder_name, user_id):
+        parent_folder = NameNode.resolve_path(wd, 'Folder', user_id)
+        new_folder = Folder(folder_name, parent_folder.id, user_id)
         db.session.add(new_folder)
         db.session.commit()
 
-    def delete_file(file_path: str):
-        file: File = NameNode.resolve_path(file_path, 'File')
+    def delete_file(file_path: str, user_id):
+        file: File = NameNode.resolve_path(file_path, 'File', user_id)
         blocks: list[Block] = file.blocks
         blocks_meta = []
         for block in blocks:
@@ -136,5 +139,15 @@ class NameNode:
         }
         db.session.delete(file)
         db.session.commit()
-        print(file_meta)
         return file_meta
+    def delete_folder(folder_path: str, user_id):
+        folder: Folder = NameNode.resolve_path(folder_path, 'Folder', user_id)
+        if not folder.children and not folder.files:
+            db.session.delete(folder)
+            db.session.commit()
+        return {},200
+    def change_directory(path:str, user_id:int):
+        folder:Folder = NameNode.resolve_path(path,'Folder',user_id)
+        if not folder:
+            return
+        return folder.get_path()

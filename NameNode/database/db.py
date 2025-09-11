@@ -1,3 +1,4 @@
+from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Column, Integer, String, Enum, ForeignKey, UniqueConstraint, BigInteger, DateTime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, relationship, backref
@@ -13,13 +14,31 @@ db = SQLAlchemy(model_class=Base)
 # Models
 
 
+class User(db.Model):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(128), nullable=False)
+
+    folders = relationship("Folder", back_populates="owner",
+                           cascade="all, delete-orphan")
+    files = relationship("File", back_populates="owner",
+                         cascade="all, delete-orphan")
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
+
+
 class Folder(db.Model):
     __tablename__ = 'folders'
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
     parent_folder = Column(Integer, ForeignKey(column='folders.id'))
-    # client = Column(Integer)
-
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User", back_populates="folders")
     parent = relationship(
         "Folder",
         remote_side=[id],
@@ -30,12 +49,14 @@ class Folder(db.Model):
                          cascade="all, delete-orphan")
 
     __table_args__ = (
-        UniqueConstraint('parent_folder', 'name', name='uq_parent_name'),
+        UniqueConstraint('parent_folder', 'name',
+                         'user_id', name='uq_parent_name_user'),
     )
 
-    def __init__(self, name, parent_folder):
+    def __init__(self, name, parent_folder, user_id):
         self.name = name
         self.parent_folder = parent_folder
+        self.user_id = user_id
 
     def get_path(self):
         parts = [self.name]
@@ -57,6 +78,8 @@ class File(db.Model):
     created_at = Column(DateTime, default=datetime.now())
     parent_folder = Column(Integer, ForeignKey(
         column='folders.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User", back_populates="files")
 
     parent = relationship("Folder", back_populates="files")
     blocks = relationship('Block', back_populates='file',
@@ -65,10 +88,11 @@ class File(db.Model):
         UniqueConstraint('parent_folder', 'name', name='uq_parent_name'),
     )
 
-    def __init__(self, name, size, parent_folder):
+    def __init__(self, name, size, parent_folder, user_id):
         self.name = name
         self.size = size
         self.parent_folder = parent_folder
+        self.user_id = user_id
 
     def get_path(self):
         parts = [self.name]
