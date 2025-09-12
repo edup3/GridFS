@@ -9,7 +9,6 @@ from cryptography.fernet import Fernet
 import base64,hashlib
 load_dotenv()
 
-
 class Client(cmd.Cmd):
     intro = "Bienvenido a GridHDFS CLI. Escribe 'help' o '?' para ver comandos.\n"
     token = None
@@ -24,17 +23,17 @@ class Client(cmd.Cmd):
     # genera una clave de 32 bytes
         digest = hashlib.sha256(password.encode()).digest()
         return base64.urlsafe_b64encode(digest)
-
-    def request_nodes(self, name: str, local_file_path: str, action: str, path: str):
-        if action == 'read':
-            namendode_response = requests.get(f'{self.namenode_url}/request_nodes',
-                                              params={'name': name, 'action': action, 'path': path}, headers=self._auth_headers())
-        elif action == 'write':
-            namendode_response = requests.get(f'{self.namenode_url}/request_nodes',
-                                              params={'name': name, 'size': os.path.getsize(local_file_path), 'action': action, 'path': path}, headers=self._auth_headers())
-        elif action == 'delete':
-            namendode_response = requests.get(f'{self.namenode_url}/request_nodes',
-                                              params={'name': name, 'action': action, 'path': path}, headers=self._auth_headers())
+    
+    def read_nodes(self, name: str, path: str):
+        namenode_response = requests.get(f'{self.namenode_url}/read_file', params={'name': name, 'path': path}, headers=self._auth_headers())
+        return namenode_response
+    
+    def write_nodes(self, name: str, local_file_path: str, path: str):
+        namendode_response = requests.get(f'{self.namenode_url}/write_file', params={'name': name, 'size': os.path.getsize(local_file_path), 'path': path}, headers=self._auth_headers())
+        return namendode_response
+    
+    def delete_nodes(self, name: str, path: str):
+        namendode_response = requests.delete(f'{self.namenode_url}/delete_file',params={'name': name, 'path': path}, headers=self._auth_headers())
         return namendode_response
 
     def write(self, metadata: Response, file_str: str):
@@ -98,7 +97,7 @@ class Client(cmd.Cmd):
                 f'{block.get('ip')}:{block.get('port')}/delete_file', params={'block_name': f'{metadata.json().get('name')}_part{block.get('part')}', 'block_path': metadata.json().get('path')}, headers=self._auth_headers())
 
     def remove_file(self, file_name):
-        metadata: Response = self.request_nodes(
+        metadata: Response = self.delete_nodes(
             file_name, '', 'delete', self.wd)
         self.delete_files(metadata)
         print('Archivo borrado correctamente')
@@ -110,7 +109,6 @@ class Client(cmd.Cmd):
         else:
             print('El directorio tiene que estar vacio')
 
-    
         # Commands
 
     def do_register(self, arg):
@@ -152,8 +150,8 @@ class Client(cmd.Cmd):
             print("Uso: put <archivo_local> <nombre_remoto>")
             return
         local_file, remote_file = args
-        metadata: Response = self.request_nodes(
-            remote_file, local_file, 'write', self.wd)
+        metadata: Response = self.write_nodes(
+            remote_file, local_file, self.wd)
         if metadata.status_code == 500:
             print(metadata.json().get('error'))
             return
@@ -170,7 +168,7 @@ class Client(cmd.Cmd):
         args = shlex.split(arg)
         if len(args) == 1:
             remote_file = args[0]
-            metadata = self.request_nodes(
+            metadata = self.read_nodes(
                 remote_file, remote_file, 'read', self.wd)
             self.read_file(metadata, remote_file)
             return
@@ -180,7 +178,7 @@ class Client(cmd.Cmd):
             return
 
         remote_file,local_file = args
-        metadata = self.request_nodes(remote_file, local_file, 'read', self.wd)
+        metadata = self.read_nodes(remote_file, local_file, 'read', self.wd)
         if metadata.ok:
             self.read_file(metadata, local_file)
             print('Leido correctamente')
@@ -262,7 +260,7 @@ class Client(cmd.Cmd):
             return
 
         remote_file = arg
-        metadata = self.request_nodes(
+        metadata = self.read_nodes(
             remote_file, remote_file, 'read', self.wd)
         self.print_file(metadata)
 

@@ -59,21 +59,42 @@ def register_datanode():
     return response
 
 
-@app.route("/request_nodes")
+@app.route("/read_file")
 @jwt_required()
-def home():
+def read_nodes():
+    user_id = get_jwt_identity()
+    request_args: dict = request.args
+    file_name: str = request_args.get('name')
+    folder_path: str = request_args.get('path')
+
+    metadata = NameNode.read(f'{folder_path}/{file_name}', user_id)
+
+    return metadata
+
+@app.route("/write_file")
+@jwt_required()
+def write_nodes():
     user_id = get_jwt_identity()
     request_args: dict = request.args
     file_size: int = request_args.get('size')  # bytes
     file_name: str = request_args.get('name')
-    action: str = request_args.get('action')
     folder_path: str = request_args.get('path')
-    if action == 'write':
-        metadata = NameNode.write(file_name, file_size, folder_path, user_id)
-    elif action == 'read':
-        metadata = NameNode.read(f'{folder_path}/{file_name}', user_id)
-    elif action == 'delete':
-        metadata = NameNode.delete_file(f'{folder_path}/{file_name}', user_id)
+
+    metadata = NameNode.write(file_name, file_size, folder_path, user_id)
+
+    return metadata
+
+@app.route("/delete_file")
+@jwt_required()
+
+def delete_nodes():
+    user_id = get_jwt_identity()
+    request_args: dict = request.args
+    file_size: int = request_args.get('size')  # bytes
+    file_name: str = request_args.get('name')
+    folder_path: str = request_args.get('path')
+
+    metadata = NameNode.delete_file(f'{folder_path}/{file_name}', user_id)
     return metadata
 
 
@@ -106,6 +127,7 @@ def change_directory():
     if not folder_path:
         return {'folder no existe'},500
     return {'new_path': folder_path}, 200
+    
 @app.route("/delete_folder", methods=["DELETE"])
 @jwt_required()
 def delete_directory():
