@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 import cmd
 import shlex
 from requests import Response
-
+from cryptography.fernet import Fernet
+import base64,hashlib
 load_dotenv()
 
 
@@ -13,12 +14,16 @@ class Client(cmd.Cmd):
     intro = "Bienvenido a GridHDFS CLI. Escribe 'help' o '?' para ver comandos.\n"
     token = None
     wd: str = ''
-    user: str
     prompt = f"GridHDFS: {wd}> "
     namenode_url: str = os.environ.get('NAMENODE_URL')
+    key = ''
 
     def _auth_headers(self):
         return {"Authorization": f"Bearer {self.token}"} if self.token else {}
+    def get_user_key(self,password: str):
+    # genera una clave de 32 bytes
+        digest = hashlib.sha256(password.encode()).digest()
+        return base64.urlsafe_b64encode(digest)
 
     def request_nodes(self, name: str, local_file_path: str, action: str, path: str):
         if action == 'read':
@@ -30,20 +35,19 @@ class Client(cmd.Cmd):
         elif action == 'delete':
             namendode_response = requests.get(f'{self.namenode_url}/request_nodes',
                                               params={'name': name, 'action': action, 'path': path}, headers=self._auth_headers())
-        return namendode_response.json()
+        return namendode_response
 
-    def write(self, metadata: dict, file_str: str):
+    def write(self, metadata: Response, file_str: str):
 
-        blocks = metadata.get('blocks')
+        blocks = metadata.json().get('blocks')
         with open(file_str, mode='rb') as f:
             part = 0
             for block in blocks:
-                print(int(block.get('block_size')))
                 subfile = f.read(block.get('block_size'))
-                print(metadata)
-                print("subfile_part:", part, subfile)
+                fer = Fernet(self.key)
+                data = base64.b64encode(fer.encrypt(subfile)).decode('utf-8')
                 response = requests.post(
-                    f'{block.get('ip')}:{block.get('port')}/write', json={'name': f'{metadata.get('name')}_part{part}', 'data': subfile.decode('utf-8'), 'path': metadata.get('path')}, headers=self._auth_headers())
+                    f'{block.get('ip')}:{block.get('port')}/write', json={'name': f'{metadata.json().get('name')}_part{part}', 'data': data, 'path': metadata.json().get('path')}, headers=self._auth_headers())
                 part += 1
                 if subfile == None:
                     break
@@ -53,30 +57,32 @@ class Client(cmd.Cmd):
             f'{datanode_ip}:{datanode_port}/read', params={'block_path': block_path, 'block_name': block_name, 'part': part}, headers=self._auth_headers())
         return block_content.json()['data']
 
-    def read_file(self, metadata, local_file_name):
-        file_name: str = metadata['name']
+    def read_file(self, metadata:Response, local_file_name):
+        file_name: str = metadata.json()['name']
         if not local_file_name:
             local_file_name = file_name
-        block_list: list = metadata['blocks']
-        path: str = metadata['path']
+        block_list: list = metadata.json()['blocks']
+        path: str = metadata.json()['path']
+        fer = Fernet(self.key)
         with open(local_file_name, mode='w') as f:
             for block_metadata in block_list:
                 ip = block_metadata['ip']
                 port = block_metadata['port']
                 block_content = self.read_block(
                     ip, port, path, file_name, block_metadata['part'])
-                f.write(block_content)
+                f.write(fer.decrypt(base64.b64decode(block_content)).decode())
 
-    def print_file(self, metadata):
-        file_name: str = metadata['name']
-        block_list: list = metadata['blocks']
-        path: str = metadata['path']
+    def print_file(self, metadata:Response):
+        file_name: str = metadata.json()['name']
+        block_list: list = metadata.json()['blocks']
+        path: str = metadata.json()['path']
+        fer = Fernet(self.key)
         for block_metadata in block_list:
             ip = block_metadata['ip']
             port = block_metadata['port']
             block_content = self.read_block(
                 ip, port, path, file_name, block_metadata['part'])
-            print(block_content)
+            print(fer.decrypt(base64.b64decode(block_content)).decode())
 
     def create_directory(self, directory_name):
         response = requests.post(
@@ -85,11 +91,11 @@ class Client(cmd.Cmd):
             print('directorio creado correctamente')
             return
 
-    def delete_files(self, metadata: dict):
-        blocks = metadata.get('blocks')
+    def delete_files(self, metadata: Response):
+        blocks = metadata.json().get('blocks')
         for block in blocks:
             response = requests.delete(
-                f'{block.get('ip')}:{block.get('port')}/delete_file', params={'block_name': f'{metadata.get('name')}_part{block.get('part')}', 'block_path': metadata.get('path')}, headers=self._auth_headers())
+                f'{block.get('ip')}:{block.get('port')}/delete_file', params={'block_name': f'{metadata.json().get('name')}_part{block.get('part')}', 'block_path': metadata.json().get('path')}, headers=self._auth_headers())
 
     def remove_file(self, file_name):
         metadata: Response = self.request_nodes(
@@ -128,6 +134,7 @@ class Client(cmd.Cmd):
             self.token = resp.json()["access_token"]
             self.wd = 'root/'
             self.prompt = f"GridHDFS: {self.wd}> "
+            self.key = self.get_user_key(password)
             print("Login exitoso")
         else:
             print("Error:", resp.json())
@@ -172,9 +179,13 @@ class Client(cmd.Cmd):
             print("Uso: get <nombre_remoto> [archivo_local]")
             return
 
-        local_file, remote_file = args
+        remote_file,local_file = args
         metadata = self.request_nodes(remote_file, local_file, 'read', self.wd)
-        self.read_file(metadata, local_file)
+        if metadata.ok:
+            self.read_file(metadata, local_file)
+            print('Leido correctamente')
+            return
+        print('Error')
 
     def do_cd(self, arg):
         """
@@ -269,10 +280,14 @@ class Client(cmd.Cmd):
         self.remove_file(arg)
 
     def do_rmdir(self, arg):
+        """
+        Elimina un directorio VACIO en el directorio actual
+        uso: rmdir <nombre_directorio>
+        """
         if not self.token:
             print('No estas logeado, intenta hacer login primero')
         self.remove_directory(arg)
-        pass
+        return
 
     def do_exit(self, arg):
         """

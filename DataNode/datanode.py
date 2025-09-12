@@ -2,10 +2,13 @@ import requests
 from flask import Flask, request, Response
 import os
 import shutil
+from dotenv import load_dotenv
+import base64
+load_dotenv()
 app = Flask(__name__)
-DATANODE_URL = 'http://127.0.0.1'
-NAMENODE_URL = 'http://127.0.0.1:5000'
-PORT = 12345
+DATANODE_URL = os.environ.get('DATANODE_URL')
+NAMENODE_URL = os.environ.get('NAMENODE_URL')
+PORT = os.environ.get('PORT')
 STORAGE_DIR = os.path.join(os.getcwd(), "storage")
 
 
@@ -67,7 +70,3 @@ def delete_file():
             pass
         return {'status': 'borrado correctamente'}, 200
 
-
-if __name__ == "__main__":
-    register_to_cluster()
-    app.run(debug=True, port=12345)
