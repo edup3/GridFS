@@ -59,7 +59,7 @@ def register_datanode():
     return response
 
 
-@app.route("/read_file")
+@app.route("/read_file",methods=['GET'])
 @jwt_required()
 def read_nodes():
     user_id = get_jwt_identity()
@@ -71,7 +71,7 @@ def read_nodes():
 
     return metadata
 
-@app.route("/write_file")
+@app.route("/write_file",methods=['POST'])
 @jwt_required()
 def write_nodes():
     user_id = get_jwt_identity()
@@ -84,7 +84,7 @@ def write_nodes():
 
     return metadata
 
-@app.route("/delete_file")
+@app.route("/delete_file",methods=['DELETE'])
 @jwt_required()
 
 def delete_nodes():

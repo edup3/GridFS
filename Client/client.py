@@ -98,7 +98,7 @@ class Client(cmd.Cmd):
 
     def remove_file(self, file_name):
         metadata: Response = self.delete_nodes(
-            file_name, '', 'delete', self.wd)
+            file_name, self.wd)
         self.delete_files(metadata)
         print('Archivo borrado correctamente')
 
@@ -168,8 +168,7 @@ class Client(cmd.Cmd):
         args = shlex.split(arg)
         if len(args) == 1:
             remote_file = args[0]
-            metadata = self.read_nodes(
-                remote_file, remote_file, 'read', self.wd)
+            metadata = self.read_nodes(remote_file, self.wd)
             self.read_file(metadata, remote_file)
             return
 
@@ -178,7 +177,7 @@ class Client(cmd.Cmd):
             return
 
         remote_file,local_file = args
-        metadata = self.read_nodes(remote_file, local_file, 'read', self.wd)
+        metadata = self.read_nodes(remote_file, self.wd)
         if metadata.ok:
             self.read_file(metadata, local_file)
             print('Leido correctamente')
@@ -260,8 +259,7 @@ class Client(cmd.Cmd):
             return
 
         remote_file = arg
-        metadata = self.read_nodes(
-            remote_file, remote_file, 'read', self.wd)
+        metadata = self.read_nodes(remote_file, self.wd)
         self.print_file(metadata)
 
     def do_rm(self, arg):
