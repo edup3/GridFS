@@ -6,7 +6,7 @@ load_dotenv()
 app = Flask(__name__)
 DATANODE_URL = os.environ.get('DATANODE_URL')
 NAMENODE_URL = os.environ.get('NAMENODE_URL')
-PORT = os.environ.get('PORT')
+PORT = os.environ.get('FLASK_RUN_PORT')
 STORAGE_DIR = os.path.join(os.getcwd(), "storage")
 
 

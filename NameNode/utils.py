@@ -82,7 +82,7 @@ class NameNode:
     def write(file_name: str, file_size: int, folder_path: str, user_id: int):
         # block_size ajustable
         file_size = int(file_size)
-        block_size = 64
+        block_size = 64 * 1000000
         # busqueda deberia ser por path
         folder: Folder = NameNode.resolve_path(folder_path, 'Folder', user_id)
         # busqueda deberia ser por path
