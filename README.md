@@ -1,11 +1,11 @@
 # ST0263 Topicos Especiales en Telematica
 
-# Estudiantes: 
-# Eduardo Piñeros Manjarres, eapinerosm@eafit.edu.co
-# Natalia Ceballos Posada, nceballosp@eafit.edu.co
+## Estudiantes: 
+### Eduardo Piñeros Manjarres, eapinerosm@eafit.edu.co
+### Natalia Ceballos Posada, nceballosp@eafit.edu.co
 
-# Profesor: 
-# Edwin Montoya Munera, emontoya@eafit.edu.co
+## Profesor: 
+### Edwin Montoya Munera, emontoya@eafit.edu.co
 
 # GRIDFS - Proyecto 1
 
