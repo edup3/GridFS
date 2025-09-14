@@ -1,9 +1,7 @@
 import requests
 from flask import Flask, request, Response
 import os
-import shutil
 from dotenv import load_dotenv
-import base64
 load_dotenv()
 app = Flask(__name__)
 DATANODE_URL = os.environ.get('DATANODE_URL')
