@@ -195,7 +195,8 @@ Para lanzar los servidores se debe tener una maquina aws con docker y git instal
     
     Ejemplo:
     
-    ![Screenshot 2025-09-14 142448.png](attachment:24e8ae65-aa8d-48fd-822e-45934a094a17:Screenshot_2025-09-14_142448.png)
+    <img width="558" alt="image" src="https://github.com/user-attachments/assets/a6d73afa-7ce1-46bb-bf34-a6f88f2e110b" />
+
     
 4. Crear la imagen docker para el proyecto `sudo docker build . -t datanode`
 5. Instanciar un contenedor de la imagen previamente creada `sudo docker run -p 5000:5000 --name datanode_1 datanode`
@@ -205,7 +206,7 @@ Para lanzar los servidores se debe tener una maquina aws con docker y git instal
 
 Para ejecutar la CLI el cliente debe configurar en un archivo .env la url del namenode de la siguiente manera en el folder GridFS/Client:
 
-![image.png](attachment:8c169aa3-4151-4dcc-85ae-8887a2996ce0:image.png)
+<img width="410" alt="image" src="https://github.com/user-attachments/assets/057a0b8a-5b13-45ba-baac-6fcaa161cb64" />
 
 Luego debe ejecutar el script de python  `py ./client.py`
 
