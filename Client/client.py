@@ -1,5 +1,4 @@
 import requests
-from dataclasses import dataclass
 import os
 from dotenv import load_dotenv
 import cmd
@@ -29,7 +28,7 @@ class Client(cmd.Cmd):
         return namenode_response
     
     def write_nodes(self, name: str, local_file_path: str, path: str):
-        namendode_response = requests.get(f'{self.namenode_url}/write_file', params={'name': name, 'size': os.path.getsize(local_file_path), 'path': path}, headers=self._auth_headers())
+        namendode_response = requests.post(f'{self.namenode_url}/write_file', params={'name': name, 'size': os.path.getsize(local_file_path), 'path': path}, headers=self._auth_headers())
         return namendode_response
     
     def delete_nodes(self, name: str, path: str):
